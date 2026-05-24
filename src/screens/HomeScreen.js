@@ -16,8 +16,13 @@ import useNoteSelection from '../hooks/use-note-selection';
 import useNotesManager from '../hooks/use-notes-manager';
 import useNotesStorage from '../hooks/use-notes-storage';
 import useVault from '../hooks/use-vault';
+import { mergeUniqueNotes } from '../utils/note-hash';
 import { HOME_SCREEN_WIDTH, styles } from './home-screen.styles';
-import { exportNotesFile, initializeExportDirectory } from '../utils/storage';
+import {
+  exportNotesFile,
+  importNotesFile,
+  initializeExportDirectory,
+} from '../utils/storage';
 
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('regular');
@@ -138,6 +143,42 @@ export default function HomeScreen() {
     ]);
   };
 
+  const handleImportNotes = async () => {
+    const importedData = await importNotesFile();
+    if (!importedData) {
+      return;
+    }
+
+    const canImportVault = !!vaultPassword;
+
+    const applyImport = () => {
+      setRegularNotes((current) => mergeUniqueNotes(current, importedData.regular));
+      if (canImportVault) {
+        setVaultNotes((current) => mergeUniqueNotes(current, importedData.vault));
+      }
+
+      Alert.alert('Import Complete', 'Notes were imported successfully.');
+    };
+
+    const hasVaultNotes = importedData.vault.length > 0;
+    const vaultMessage =
+      hasVaultNotes && !canImportVault
+        ? ' Vault notes in the file were skipped because the vault is locked.'
+        : '';
+
+    Alert.alert(
+      'Import Notes',
+      `Import notes from ${importedData.fileName}?${vaultMessage}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Import',
+          onPress: applyImport,
+        },
+      ]
+    );
+  };
+
   const handleAddButtonPress = () => {
     if (selectedIds.length > 0) {
       clearSelection();
@@ -167,7 +208,7 @@ export default function HomeScreen() {
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.headerWrapper}>
-          <Header onExport={exportNotesFile} />
+          <Header onExport={exportNotesFile} onImport={handleImportNotes} />
           <SearchBar value={searchQuery} onChange={setSearchQuery} />
           <NotesTabs
             activeTab={activeTab}

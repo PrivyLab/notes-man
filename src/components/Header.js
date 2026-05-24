@@ -8,7 +8,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../constants/colors';
 
-export default function Header({ onExport }) {
+export default function Header({ onExport, onImport }) {
   const options = { weekday: 'long', month: 'long', day: 'numeric' };
   const today = new Date().toLocaleDateString('en-US', options);
 
@@ -19,8 +19,15 @@ export default function Header({ onExport }) {
         <Text style={styles.title}>Notes Man</Text>
       </View>
       <View style={styles.rightSection}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={onImport}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="cloud-upload-outline" size={22} color={COLORS.primary} />
+        </TouchableOpacity>
         <TouchableOpacity 
-          style={styles.exportButton} 
+          style={styles.actionButton} 
           onPress={onExport}
           activeOpacity={0.7}
         >
@@ -47,7 +54,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  exportButton: {
+  actionButton: {
     width: 40,
     height: 40,
     borderRadius: 20,

@@ -8,7 +8,7 @@
 
 - **100% Offline**: The application operates without external servers. All data is stored in the device's secure internal storage.
 - **No Cloud Synchronization**: Your data is never transmitted over the internet. There is zero tracking, syncing, or data collection.
-- **Data Ownership**: You maintain complete control over your database. A built-in Export feature allows for manual backups to your preferred secure location.
+- **Data Ownership**: You maintain complete control over your database. Built-in export and import features allow manual backup and restore on your preferred secure location.
 
 ---
 
@@ -25,8 +25,17 @@ Maintain focus by anchoring essential information. Notes in either section can b
 ### 🗑️ Gesture-Based Deletion
 Utilizes a custom gesture-interceptor system for efficient data management. Notes can be deleted by dragging them into a dedicated secure deletion zone.
 
-### 📥 Local Data Management
-Provides a robust **Export & Share** utility. Users can export their entire encrypted database as a JSON file for manual archiving and backup.
+### 🔎 Fast Search
+Quickly search notes by title and content to find important information faster.
+
+### 📥 Local Backup and Restore
+Provides spreadsheet-based **Export** and **Import** tools for manual backup and restore.
+- Notes are exported in **XLSX** format for easier reading and sharing.
+- Re-importing the same backup does not duplicate notes unnecessarily.
+- Vault notes are imported only when the vault is unlocked.
+
+### 📂 Android Export Folder Support
+On Android, exported backups can be stored in a user-selected folder for easier file access and long-term backup management.
 
 ---
 
@@ -34,7 +43,8 @@ Provides a robust **Export & Share** utility. Users can export their entire encr
 
 - **Framework**: [Expo](https://expo.dev/) (SDK 55)
 - **Encryption**: AES-256 (via `crypto-js`) with secure cryptographic primitives.
-- **Persistence**: File-based local JSON storage using `expo-file-system/legacy`.
+- **Persistence**: File-based local storage using `expo-file-system/legacy`.
+- **Backup Format**: XLSX workbook export/import support.
 - **Interface**: High-performance UI utilizing custom React Native animations and Ionicons.
 
 ---
@@ -42,7 +52,7 @@ Provides a robust **Export & Share** utility. Users can export their entire encr
 ## 🔐 Security Protocols
 **Notes Man** employs professional-grade encryption standards:
 1. **Zero-Knowledge**: Your password is the sole decryption key and is never stored on the device.
-2. **Data Persistence**: If the vault password is lost, the encrypted data cannot be recovered. 
+2. **Data Persistence**: If the vault password is lost, the encrypted data cannot be recovered.
 3. **Vault Reset**: A secure reset function is available to clear the database and start fresh, ensuring no unauthorized access is possible.
 
 ---

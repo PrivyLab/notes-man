@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { normalizeNotes } from '../utils/note-hash';
 import { loadNotesFromStorage, saveNotesToStorage } from '../utils/storage';
 
 export default function useNotesStorage({
@@ -16,8 +17,8 @@ export default function useNotesStorage({
   useEffect(() => {
     const initStorage = async () => {
       const result = await loadNotesFromStorage();
-      setRegularNotes(result.regular);
-      setVaultNotes(result.vault);
+      setRegularNotes(normalizeNotes(result.regular));
+      setVaultNotes(normalizeNotes(result.vault));
       setVaultNeedsPassword(!!result.vaultNeedsPassword);
       setHasLoaded(true);
     };

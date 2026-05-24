@@ -1,8 +1,11 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import CryptoJS from 'crypto-js';
 import { Platform } from 'react-native';
 import * as XLSX from 'xlsx';
+
+import { ensureNoteHash, normalizeNotes } from './note-hash';
 
 const NOTES_FILE = `${FileSystem.documentDirectory}notes.json`;
 const EXPORT_FILE = `${FileSystem.documentDirectory}notes-export.xlsx`;
@@ -43,7 +46,44 @@ const serializeNotesForExport = (notes) =>
     Content: note.content || '',
     Pinned: note.isPinned ? 'Yes' : 'No',
     CreatedAt: note.createdAt || '',
+    NoteHash: note.noteHash || '',
   }));
+
+const normalizeImportedNote = (row, index) => {
+  const title = typeof row.Title === 'string' ? row.Title.trim() : '';
+  const content = typeof row.Content === 'string' ? row.Content.trim() : '';
+
+  if (!title && !content) {
+    return null;
+  }
+
+  return ensureNoteHash({
+    id: `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`,
+    title,
+    content,
+    isPinned:
+      String(row.Pinned || '')
+        .trim()
+        .toLowerCase() === 'yes',
+    createdAt:
+      typeof row.CreatedAt === 'string' && row.CreatedAt.trim()
+        ? row.CreatedAt.trim()
+        : new Date().toISOString(),
+    noteHash: typeof row.NoteHash === 'string' ? row.NoteHash.trim() : '',
+  });
+};
+
+const parseImportedSheet = (workbook, sheetName) => {
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) {
+    return [];
+  }
+
+  return XLSX.utils
+    .sheet_to_json(sheet, { defval: '' })
+    .map(normalizeImportedNote)
+    .filter(Boolean);
+};
 
 const buildTimestamp = () =>
   new Date()
@@ -172,6 +212,34 @@ export const initializeExportDirectory = async () => {
   }
 
   return requestNotesExportDirectoryAsync();
+};
+
+export const importNotesFile = async () => {
+  const result = await DocumentPicker.getDocumentAsync({
+    type: [
+      XLSX_MIME_TYPE,
+      'application/vnd.ms-excel',
+      'application/octet-stream',
+    ],
+    copyToCacheDirectory: true,
+    multiple: false,
+  });
+
+  if (result.canceled || !result.assets?.length) {
+    return null;
+  }
+
+  const [asset] = result.assets;
+  const fileBase64 = await FileSystem.readAsStringAsync(asset.uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+  const workbook = XLSX.read(fileBase64, { type: 'base64' });
+
+  return {
+    regular: parseImportedSheet(workbook, 'Regular Notes'),
+    vault: parseImportedSheet(workbook, 'Vault Notes'),
+    fileName: asset.name,
+  };
 };
 
 /**
@@ -315,7 +383,7 @@ export const loadNotesFromStorage = async (password = null) => {
 
     // Compatibility check for old formats
     if (Array.isArray(data)) {
-      return { regular: data, vault: [], vaultNeedsPassword: false };
+      return { regular: normalizeNotes(data), vault: [], vaultNeedsPassword: false };
     }
 
     if (data.version === undefined && data.encrypted !== undefined) {
@@ -323,9 +391,19 @@ export const loadNotesFromStorage = async (password = null) => {
       if (data.encrypted) {
         if (!password) return { regular: [], vault: [], vaultNeedsPassword: true };
         const decrypted = decrypt(data.data, password);
-        return decrypted ? { regular: [], vault: JSON.parse(decrypted), vaultNeedsPassword: false } : { regular: [], vault: [], vaultNeedsPassword: true, error: true };
+        return decrypted
+          ? {
+              regular: [],
+              vault: normalizeNotes(JSON.parse(decrypted)),
+              vaultNeedsPassword: false,
+            }
+          : { regular: [], vault: [], vaultNeedsPassword: true, error: true };
       }
-      return { regular: JSON.parse(data.data), vault: [], vaultNeedsPassword: false };
+      return {
+        regular: normalizeNotes(JSON.parse(data.data)),
+        vault: [],
+        vaultNeedsPassword: false,
+      };
     }
 
     // Version 2 format
@@ -340,12 +418,18 @@ export const loadNotesFromStorage = async (password = null) => {
       if (decrypted === null) {
         return { regular, vault: [], vaultNeedsPassword: true, error: 'Invalid password' };
       }
-      return { regular, vault: JSON.parse(decrypted), vaultNeedsPassword: false };
+      return {
+        regular: normalizeNotes(regular),
+        vault: normalizeNotes(JSON.parse(decrypted)),
+        vaultNeedsPassword: false,
+      };
     }
 
     return { 
-      regular, 
-      vault: typeof vaultEnvelope.data === 'string' ? JSON.parse(vaultEnvelope.data) : vaultEnvelope.data, 
+      regular: normalizeNotes(regular), 
+      vault: normalizeNotes(
+        typeof vaultEnvelope.data === 'string' ? JSON.parse(vaultEnvelope.data) : vaultEnvelope.data
+      ), 
       vaultNeedsPassword: false 
     };
 

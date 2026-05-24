@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { buildNoteHash, ensureNoteHash, normalizeNotes } from '../utils/note-hash';
+
 export default function useNotesManager() {
   const [regularNotes, setRegularNotes] = useState([]);
   const [vaultNotes, setVaultNotes] = useState([]);
@@ -14,19 +16,28 @@ export default function useNotesManager() {
   };
 
   const addNote = (tab, title, content) => {
-    const newNote = {
+    const newNote = ensureNoteHash({
       id: Date.now().toString(),
       title,
       content,
       createdAt: new Date().toISOString(),
-    };
+    });
 
     updateNotesForTab(tab, (current) => [newNote, ...current]);
   };
 
   const updateNote = (tab, id, title, content) => {
     updateNotesForTab(tab, (current) =>
-      current.map((note) => (note.id === id ? { ...note, title, content } : note))
+      current.map((note) =>
+        note.id === id
+          ? {
+              ...note,
+              title,
+              content,
+              noteHash: buildNoteHash({ ...note, title, content }),
+            }
+          : note
+      )
     );
   };
 
@@ -50,9 +61,15 @@ export default function useNotesManager() {
 
   return {
     regularNotes,
-    setRegularNotes,
+    setRegularNotes: (value) =>
+      setRegularNotes((current) =>
+        typeof value === 'function' ? normalizeNotes(value(current)) : normalizeNotes(value)
+      ),
     vaultNotes,
-    setVaultNotes,
+    setVaultNotes: (value) =>
+      setVaultNotes((current) =>
+        typeof value === 'function' ? normalizeNotes(value(current)) : normalizeNotes(value)
+      ),
     addNote,
     updateNote,
     deleteNote,
