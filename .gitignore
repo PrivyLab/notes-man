@@ -42,3 +42,10 @@ app-example
 /ios
 /android
 
+
+# User-specific IDE settin
+.claude
+.vscode
+.antigravity
+.agent
+scripts/*
